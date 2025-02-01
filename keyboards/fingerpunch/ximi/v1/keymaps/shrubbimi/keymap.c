@@ -161,6 +161,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 		Cnav is magic key or altrep in same fashion as above
 		Feed a variable to update_oneshot()
 		Fix _FN?
+			OSMs can't be chained on held layers without tapping each individually
 	
 	xword code
 		shift-reverse for non LCAP users
@@ -413,10 +414,6 @@ bool is_oneshot_cancel_key(uint16_t keycode) {  // OneShot user-defined keys
 
 bool is_oneshot_ignored_key(uint16_t keycode) {
     switch (keycode) {
-		case OS_SHFT:
-		case OS_CTRL:
-		case OS_ALT:
-		case OS_GUI:
 		case OS_SCAPS:
 		case OS_CNAV:
 		case OS_SYM:
@@ -439,6 +436,15 @@ bool is_oneshot_hrm_key(uint16_t keycode) {
 	}
 }
 
+bool is_oneshot_hrm_layer_key(uint16_t keycode) {
+	switch (keycode) {
+		case OS_FN:
+			return true;
+		default:
+			return false;
+	}
+}
+
 void keyboard_post_init_user(void) {
 	set_sym_word_layer(_SYM);
 }
@@ -455,15 +461,15 @@ void matrix_scan_user(void) {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 	
-	//			   &os_xxxx_state  Tap		Hold	 Lock	  Trigger   keycode  record
-	update_oneshot(&os_shft_state, KC_LSFT, KC_LSFT, KC_LSFT, OS_SHFT,  keycode, record);
-    update_oneshot(&os_ctrl_state, KC_LCTL, KC_LCTL, KC_LCTL, OS_CTRL,  keycode, record);
-    update_oneshot(&os_alt_state,  KC_LALT, KC_LALT, KC_LALT, OS_ALT,   keycode, record);
-    update_oneshot(&os_gui_state,  KC_LGUI, KC_LGUI, KC_LGUI, OS_GUI,   keycode, record);
-	update_oneshot(&os_scaps_state,KC_LSFT, KC_LSFT, KC_LCAP, OS_SCAPS, keycode, record);
-	update_oneshot(&os_cnav_state, KC_LCTL, _NAV,	 _NAV,    OS_CNAV,  keycode, record);
-	update_oneshot(&os_sym_state,  _SYM,	_SYM,	 _SYM,    OS_SYM,	keycode, record);
-	update_oneshot(&os_fn_state,   _FN,	    _FN,	 _FN,	  OS_FN,	keycode, record);
+	//			  		&os_xxxx_state  Tap		 Hold	 Lock	  Trigger   keycode  record
+	update_oneshot(		&os_scaps_state,KC_LSFT, KC_LSFT, KC_LCAP, OS_SCAPS, keycode, record);
+	update_oneshot(		&os_shft_state, KC_LSFT, KC_LSFT, KC_LSFT, OS_SHFT,  keycode, record);
+    update_oneshot(		&os_ctrl_state, KC_LCTL, KC_LCTL, KC_LCTL, OS_CTRL,  keycode, record);
+    update_oneshot(		&os_alt_state,  KC_LALT, KC_LALT, KC_LALT, OS_ALT,   keycode, record);
+    update_oneshot(		&os_gui_state,  KC_LGUI, KC_LGUI, KC_LGUI, OS_GUI,   keycode, record);
+	update_oneshot(		&os_cnav_state,	KC_LCTL, _NAV,	 _NAV,     OS_CNAV,  keycode, record);
+	update_oneshot(		&os_sym_state,	_SYM,	 _SYM,	 _SYM,     OS_SYM,	 keycode, record);
+	if (!update_oneshot(&os_fn_state,   _FN,	 _FN,	 _FN,	   OS_FN,	 keycode, record)) { return false; }
 	
 	if (is_caps_word_enabled() && os_scaps_state == os_locked) {
 		disable_caps_word();

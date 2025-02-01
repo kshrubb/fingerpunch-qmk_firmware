@@ -21,7 +21,7 @@ typedef enum {
 // disabled by setting them to KC_NO. If the lock state is disabled,
 // the second keypress will cancel the first tap. Check the keymap
 // for examples on how to configure these keys.
-void update_oneshot(
+bool update_oneshot(
     oneshot_state *state,
     uint16_t tap,
 	uint16_t hold,
@@ -45,5 +45,7 @@ bool is_oneshot_cancel_key(uint16_t keycode);
 bool is_oneshot_ignored_key(uint16_t keycode);
 
 bool is_oneshot_hrm_key(uint16_t keycode);
+
+bool is_oneshot_hrm_layer_key(uint16_t keycode);
 
 bool is_modifier_key(uint16_t keycode);

@@ -30,16 +30,16 @@ bool is_modifier_key(uint16_t keycode) {
 	}
 }
 
-void update_oneshot(
-    oneshot_state *state,
-    uint16_t tap,
+bool update_oneshot(
+	oneshot_state *state,
+	uint16_t tap,
 	uint16_t hold,
 	uint16_t lock,
-    uint16_t trigger,
-    uint16_t keycode,
-    keyrecord_t *record
+	uint16_t trigger,
+	uint16_t keycode,
+	keyrecord_t *record
 ) {
-    if (keycode == trigger) {  // If OS_ key
+	if (keycode == trigger) {  // If OS_ key
 		if (record->event.pressed) {  // On key down
 			switch (*state) {
 				case os_up_unqueued:  // If unqueued, register OS_ and set held state
@@ -51,7 +51,7 @@ void update_oneshot(
 						*state = os_down_queued;
 					}
 					break;
-				case os_up_queued:  // If queued, set lock state
+				case os_up_queued:	// If queued, set lock state
 					if (lock == KC_NO) {
 						unregister_func(tap);
 						*state = os_up_unqueued;
@@ -62,15 +62,15 @@ void update_oneshot(
 					}
 					*state = os_locked;
 					break;
-				case os_locked:  // If locked, set unqueued state
+				case os_locked:	 // If locked, set unqueued state
 					unregister_func(lock);
 					*state = os_up_unqueued;
 					break;
 				default:
 					break;
 			}
-        } else {  // Key up
-            switch (*state) {
+		} else {  // Key up
+			switch (*state) {
 				case os_down_queued:  // If not used while held, set up_queue state
 					if (tap != hold) {
 						unregister_func(hold);
@@ -78,16 +78,15 @@ void update_oneshot(
 					}
 					*state = os_up_queued;
 					break;
-				case os_down_used:  // If used while held, unregister and reset state
+				case os_down_used:	// If used while held, unregister and reset state
 					unregister_func(hold);
 					*state = os_up_unqueued;
 					break;
 				default:
 					break;
-            }
-        }
-    } else {  // If not OS_ key
-		bool hrm = (is_oneshot_hrm_key(keycode) && tap == read_source_layers_cache(record->event.key));
+			}
+		}
+	} else {  // If not OS_ key
 		if (record->event.pressed) {  // Key down
 			if (is_oneshot_cancel_key(keycode) && *state != os_up_unqueued) {
 				switch (*state) {  // Cancel oneshot on designated cancel keydown
@@ -106,9 +105,30 @@ void update_oneshot(
 						break;
 				}
 				*state = os_up_unqueued;
-			} else if (!is_oneshot_ignored_key(keycode)) {
+			} else if (is_oneshot_hrm_key(keycode)) {
+				switch (*state) {
+					case os_up_queued:	// If up and queued, set up_used state
+						if (is_oneshot_hrm_layer_key(trigger)) {
+							*state = os_up_unqueued;
+							layer_off(tap);
+							return false;
+						}
+						break;
+					case os_down_queued:  // If down and queued, set down_used state
+						if (is_oneshot_hrm_layer_key(trigger)) {
+							*state = os_down_used;
+						}
+						break;
+					case os_up_used:  // If queue is used, unregister mod and reset state
+						unregister_func(tap);
+						*state = os_up_unqueued;
+						break;
+					default:
+						break;
+				}
+			} else if (!is_oneshot_ignored_key(keycode) || !is_oneshot_hrm_key(trigger)) {
 				switch (*state) {  // Process key
-					case os_up_queued:  // If up and queued, set up_used state
+					case os_up_queued:	// If up and queued, set up_used state
 						*state = os_up_used;
 						break;
 					case os_down_queued:  // If down and queued, set down_used state
@@ -121,28 +141,29 @@ void update_oneshot(
 					default:
 						break;
 				}
-			} else if (hrm) {
-				switch (*state) {
-					case os_up_queued:  // If up and queued, set up_used state
-						unregister_func(tap);
-						*state = os_up_unqueued;
-						break;
-					case os_down_queued:  // If down and queued, set down_used state
-						*state = os_down_used;
-						break;
-					default:
-						break;
-				}
-			}
-		} else if (!is_oneshot_ignored_key(keycode) || hrm) {
-			switch (*state) {
-				case os_up_used:  // If queue is used, unregister mod and reset state
-					unregister_func(tap);
-					*state = os_up_unqueued;
-					break;
-				default:
-					break;
+			} 
+		} else if (!is_oneshot_ignored_key(keycode) || (is_oneshot_hrm_key(keycode) && is_oneshot_hrm_layer_key(trigger))) {
+			if (*state == os_up_used) {  // On non-ignored keyup, consider the oneshot used
+				unregister_func(tap);
+				*state = os_up_unqueued;
 			}
 		}
-    }
+	}
+	return true;
+}
+
+__attribute__((weak)) bool is_oneshot_cancel_key(uint16_t keycode) {
+	return false;
+}
+
+__attribute__((weak)) bool is_oneshot_hrm_key(uint16_t keycode) {
+	return false;
+}
+
+__attribute__((weak)) bool is_oneshot_hrm_layer_key(uint16_t keycode) {
+	return false;
+}
+
+__attribute__((weak)) bool is_oneshot_ignored_key(uint16_t keycode) {
+	return false;
 }
