@@ -13,3 +13,5 @@ REPEAT_KEY_ENABLE = no
 CONSOLE_ENABLE = no
 
 SRC += oneshot.c
+SRC += repeat_key.c
+SRC += xword.c

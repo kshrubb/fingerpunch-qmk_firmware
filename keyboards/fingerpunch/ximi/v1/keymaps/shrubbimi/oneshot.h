@@ -4,17 +4,23 @@
 
 // Represents the six states a oneshot key can be in
 typedef enum {
-    os_up_unqueued,
-    os_up_queued,
-	os_up_used,
-    os_down_queued,
-    os_down_used,
-	os_locked,
+    os_up_unqueued,		// Keyup 	-> no state queued
+    os_down_queued,		// Keydown -> held state queued for use
+    os_down_used,		// Keydown	-> held state used, tap state will not queue
+    os_up_queued,		// Keyup	-> tap state queued
+	os_up_used,			// Keyup	-> tap state used, state returns to unqueued state on any following key-down or key-up
+	os_locked,			// Down x2	-> lock state triggered, returns to unqueued state on next press of OS_xxxx key
 } oneshot_state;
 
-// Custom dual role oneshot mod implementation that doesn't rely on timers. If
-// a mod is	used while it is held it will be unregistered on keyup as normal, 
-// otherwise it will be queued and only released after the next non-mod keyup.
+// Custom Tri-Role One-Shot Mod/Layer implementation that doesn't
+// rely on timers. If a mod or layer is used while it is held it
+// will be unregistered on keyup as normal, otherwise it will be
+// queued and released after the next non-mod keyup. 
+// Tap, hold and lock states can be configured individually 
+// per key to be any mod or layer. Hold and lock states can be 
+// disabled by setting them to KC_NO. If the lock state is disabled,
+// the second keypress will cancel the first tap. Check the keymap
+// for examples on how to configure these keys.
 void update_oneshot(
     oneshot_state *state,
     uint16_t tap,
@@ -25,8 +31,8 @@ void update_oneshot(
     keyrecord_t *record
 );
 
+// Helper functions to distinguish and handle layers vs modifiers
 void register_func(uint16_t func);
-
 void unregister_func(uint16_t func);
 
 // To be implemented by the consumer. Defines keys to cancel oneshot mods.
