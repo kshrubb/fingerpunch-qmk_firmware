@@ -126,7 +126,7 @@ bool update_oneshot(
 					default:
 						break;
 				}
-			} else if (!is_oneshot_ignored_key(keycode) || !is_oneshot_hrm_key(trigger)) {
+			} else if (!is_oneshot_ignored_key(keycode)) {
 				switch (*state) {  // Process key
 					case os_up_queued:	// If up and queued, set up_used state
 						*state = os_up_used;
