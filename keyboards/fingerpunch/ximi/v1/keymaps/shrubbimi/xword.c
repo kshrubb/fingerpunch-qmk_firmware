@@ -1,9 +1,9 @@
 #include "xword.h"
 
-xword_state xw_cw_state = xw_off;
-xword_state xw_sw_state = xw_off;
+static xword_state xw_cw_state = xw_off;
+static xword_state xw_sw_state = xw_off;
 
-uint8_t sym_layer = 0;
+static uint8_t sym_layer;
 
 void set_sym_word_layer(uint8_t layer) {
 	sym_layer = layer;
@@ -11,7 +11,11 @@ void set_sym_word_layer(uint8_t layer) {
 
 void enable_caps_word(void) {
 	if (xw_cw_state != xw_off) { return; }
-	xw_cw_state = xw_on;
+	#ifdef XWORD_NO_EDIT
+		xw_cw_state = xw_used;
+	#else
+		xw_cw_state = xw_on;
+	#endif
 	caps_word_set_user(&xw_cw_state, true);
 }
 
@@ -26,7 +30,11 @@ void enable_sym_word(void) {
 	if (IS_LAYER_OFF(sym_layer)) {
 		layer_on(sym_layer);
 	}
-	xw_sw_state = xw_on;
+	#ifdef XWORD_NO_EDIT
+		xw_sw_state = xw_used;
+	#else
+		xw_sw_state = xw_on;
+	#endif
 	sym_word_set_user(&xw_sw_state, true);
 }
 
@@ -104,11 +112,6 @@ __attribute__((weak)) void sym_word_set_user(xword_state *state, bool active) {}
 
 __attribute__((weak)) bool caps_word_press_user(xword_state *state, uint16_t keycode) {
 	
-	// Uncomment to disable initial edit state
-	/* if (*state == xw_on) {
-		*state == xw_used;
-	} */
-	
 	switch (keycode) {	
 		
 		// Remove this block if you are using KC_LCAP in caps_word_set_user()
@@ -139,11 +142,6 @@ __attribute__((weak)) bool caps_word_press_user(xword_state *state, uint16_t key
 }
 
 __attribute__((weak)) bool sym_word_press_user(xword_state *state, uint16_t keycode) {
-	
-	// Uncomment to disable initial edit state
-	/* if (*state == xw_on) {
-		*state == xw_used;
-	} */
 	
 	switch (keycode) {
 				
