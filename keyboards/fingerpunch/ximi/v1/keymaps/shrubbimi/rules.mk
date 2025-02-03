@@ -10,8 +10,9 @@ ENCODER_ENABLE = yes
 AUDIO_ENABLE = no
 TRI_LAYER_ENABLE = no
 REPEAT_KEY_ENABLE = no
-CONSOLE_ENABLE = no
+CONSOLE_ENABLE = yes
 
+SRC += dynamic_key.c
 SRC += oneshot.c
-SRC += repeat_key.c
 SRC += xword.c
+SRC += repeat_key.c
