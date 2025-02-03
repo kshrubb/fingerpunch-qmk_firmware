@@ -1,9 +1,10 @@
 #include QMK_KEYBOARD_H
 
+#include "dynamic_key.h"
 #include "oneshot.h"
 #include "xword.h"
 #include "repeat_key.h"
-#include "select_word.h"
+#include "print.h"
 
 // Layer names
 enum layer_names {
@@ -42,6 +43,7 @@ enum custom_keycodes {
 	OS_SYM,
 	OS_FN,
 	REPEAT,
+	ALTREP,
 };
 
 // Combos
@@ -82,10 +84,12 @@ combo_t key_combos[COMBO_COUNT] = {
 // Key Overrides
 const key_override_t base_comma_override = ko_make_basic(MOD_MASK_SHIFT, KC_COMM, KC_COLN);
 const key_override_t base_dot_override = ko_make_basic(MOD_MASK_SHIFT, KC_DOT, KC_SCLN);
+const key_override_t base_spc_override = ko_make_basic(MOD_MASK_SHIFT, KC_SPC, KC_END);
 
 const key_override_t **key_overrides = (const key_override_t *[]) {
 	&base_comma_override,
 	&base_dot_override,
+	&base_spc_override,
 	NULL
 };
 
@@ -128,6 +132,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 		- Would not recommend 
 
 	Combos:
+		QW -> PANIC
 		WE -> Esc
 		SD -> Del
 		DF -> BSpc
@@ -144,27 +149,25 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 	More NAV tools:
 	--> Script keys on NAV?
-	--> join lines?
 			
-	Magic/Leader/Repeat/Alt-Repeat?
+	Leader?
 	Xcase
-		
-	Shift+Space key override
-	Shift+NumRow overrides for more symbols in sym_word?
 	
-	Fix Reuer repeat key stickiness?
-		upon repeat trigger, flag a condition in the key tracking to stop tracking until the event has been generated
-		
-	osl code
-		Scaps is shift after space or backspace, Repeat key after alphanumeric, 
-			reset to shift by default with quick timer after last keypress
-		Cnav is magic key or altrep in same fashion as above
-		Feed a variable to update_oneshot()
-		Fix _FN?
-			OSMs can't be chained on held layers without tapping each individually
+	Shift+Space key override
+	Ctrl+NumRow overrides for more symbols in sym_word?
+		a !=
+		h =>
+		j ->
+		g <=
+		f <-
 	
 	xword code
 		shift-reverse for non LCAP users
+		symword doesnt work lol
+	
+	Commentate all code 
+		XWORD_NO_EDIT config options
+		DYNAMIC_KEY_INTERVAL
 	
 --------------------------------------------
 |||||||||||||||||||||||||||||||||||| CHECK |
@@ -190,7 +193,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |      |   Z  |   X  |   C  |   V  |   B  |         		  		   |   N  |   M  |  , : |  . ; |   /  |      |
  * `-----------------------------------------'         		  		   `-----------------------------------------'
  *        ,------.         		,-----------------------.    ,-----------------------.    		   ,------.
- *        | Rot0 |       		|       |  Ctrl |  Spc  |    |  Bspc |  Shft |       |    		   | Rot1 |
+ *        | Rot0 |       		|       |CtrlMag|  Spc  |    |  Bspc |ShftRep|       |    		   | Rot1 |
  *        `------'     		    |  _FN  |  _NAV |       |    |       |  Caps |  _SYM |    		   `------'
  *                 				`-----------------------'    `-----------------------' */
 
@@ -210,10 +213,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|         				   |------+------+------+------+------+------|
  * |      |   X  |   Q  |   M  |   W  |   Z  |         		  		   |   K  |   F  |   '  |   ;  |   .  |      |
  * `-----------------------------------------'         		  		   `-----------------------------------------'
- *        ,------.         		,-----------------------.    ,----------------------.    		   ,------.
+ *        ,------.         		,-----------------------.    ,-----------------------.    		   ,------.
  *        | Rot0 |       		|       |  Ctrl |  Spc  |    |  Bspc |       |       |    		   | Rot1 |
  *        `------'     		    |  _FN  |  _NAV |       |    |       |  Shft |  _SYM |    		   `------'
- *                 				`-----------------------'    `----------------------' */
+ *                 				`-----------------------'    `-----------------------' */
 
 [_ALT] = LAYOUT_ximi(
 	______,		KC_B,		KC_L,		KC_D,		KC_C,		KC_V,		KC_J,		KC_Y,		KC_O,		KC_U,		KC_COMM,	______,
@@ -234,7 +237,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  *        ,------.         		,-----------------------.    ,-----------------------.    		   ,------.
  *        | Rot0 |       		|       |  Ctrl |  Spc  |    |  Bspc |       |       |    		   | Rot1 |
  *        `------'     		    |  _FN  |  _NAV |       |    |       |  Shft |  _SYM |    		   `------'
- *                 				`-----------------------'    `----------------------'  */
+ *                 				`-----------------------'    `-----------------------'  */
 
 [_SYM] = LAYOUT_ximi(
 	______,		KC_EXLM,	KC_AT,		KC_HASH,	KC_DLR,		S(KC_COMM),	S(KC_DOT),	KC_EQL,		KC_PLUS,	KC_MINS,	KC_UNDS,	______,
@@ -252,10 +255,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|         				   |------+------+------+------+------+------|
  * |      | Undo |  Cut | Copy | Paste| Redo |        		  		   |      |  ()  |  []  |  {}  |  <>  |      |
  * `-----------------------------------------'         		  		   `-----------------------------------------'
- *        ,------.         		,------------------------.    ,-----------------------.    		   ,------.
+ *        ,------.         		,-----------------------.    ,------------------------.    		   ,------.
  *        | Rot0 |       		|       |  Ctrl |  Spc  |    |  Bspc |       |        |    		   | Rot1 |
  *        `------'     		    |  _FN  |  _NAV |       |    |       |  Shft |  _SYM  |    		   `------'
- *                 				`------------------------'    `-----------------------' */
+ *                 				`-----------------------'    `------------------------' */
 
 [_NAV] = LAYOUT_ximi(
 	// ______,	XXXXXX,		KC_HOME,	KC_END,		XXXXXX,		LN_JOIN,	XXXXXX,		XXXXXX,		XXXXXX,		XXXXXX,		XXXXXX,		______,
@@ -307,8 +310,32 @@ oneshot_state os_cnav_state = os_up_unqueued;
 oneshot_state os_sym_state = os_up_unqueued;
 oneshot_state os_fn_state = os_up_unqueued;
 
-void reset_board(void) {  // Helper function for reset keycodes
-	is_ide_active = false;
+void trigger_repeat_key(void) {
+	repeat_key_tap();
+}
+
+void trigger_alt_repeat_key(void) {
+	alt_repeat_key_tap();
+}
+
+uint16_t get_dynamic_keycode(uint16_t keycode) {  // Dynamic user-defined keys
+	switch (keycode) {
+		case OS_SCAPS:
+			return REPEAT;
+		case OS_CNAV:
+			return ALTREP;
+		case KC_BSPC:
+			return KC_SPC;
+		default:
+			return KC_NO;
+	}
+}
+
+bool remember_last_key_user(uint16_t keycode, keyrecord_t* record, uint8_t* remembered_mods) {  // Repeat user-defined keys
+	if (is_oneshot_ignored_key(keycode) || is_oneshot_hrm_key(keycode) || is_oneshot_cancel_key(keycode)) {
+		return false;
+	}
+	return true;
 }
 
 bool caps_word_press_user(xword_state *state, uint16_t keycode) {  // xWord user-defined keys
@@ -392,10 +419,10 @@ void sym_word_set_user(xword_state *state, bool active) {
 		}
 		register_code(KC_LNUM);
 	} else if (!active) {
-		unregister_code(KC_LNUM);
 		if (os_sym_state != os_up_unqueued) {
 			layer_on(_SYM);
 		}
+		unregister_code(KC_LNUM);
 	}
 }
 
@@ -418,6 +445,7 @@ bool is_oneshot_ignored_key(uint16_t keycode) {
 		case OS_CNAV:
 		case OS_SYM:
 		case OS_FN:
+		case KC_NO:
 			return true;
 		default:
 			return false;
@@ -445,8 +473,8 @@ bool is_oneshot_hrm_layer_key(uint16_t keycode) {
 	}
 }
 
-void keyboard_post_init_user(void) {
-	set_sym_word_layer(_SYM);
+void reset_board(void) {
+	is_ide_active = false;
 }
 
 void matrix_scan_user(void) {
@@ -454,30 +482,42 @@ void matrix_scan_user(void) {
 		if (timer_elapsed(alt_tab_timer) > 1500) {
 			unregister_code(KC_LALT);
 			is_alt_tab_active = false;
-			set_mods(saved_mods);
 		}
 	}
 };
 
+void keyboard_post_init_user(void) {
+	debug_enable=true;
+	debug_matrix=true;
+	set_sym_word_layer(_SYM);
+	set_dynamic_key_timeout_interval(DYNAMIC_KEY_INTERVAL);
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 	
-	//			  		&os_xxxx_state  Tap		 Hold	 Lock	  Trigger   keycode  record
-	update_oneshot(		&os_scaps_state,KC_LSFT, KC_LSFT, KC_LCAP, OS_SCAPS, keycode, record);
-	update_oneshot(		&os_shft_state, KC_LSFT, KC_LSFT, KC_LSFT, OS_SHFT,  keycode, record);
-    update_oneshot(		&os_ctrl_state, KC_LCTL, KC_LCTL, KC_LCTL, OS_CTRL,  keycode, record);
-    update_oneshot(		&os_alt_state,  KC_LALT, KC_LALT, KC_LALT, OS_ALT,   keycode, record);
-    update_oneshot(		&os_gui_state,  KC_LGUI, KC_LGUI, KC_LGUI, OS_GUI,   keycode, record);
-	update_oneshot(		&os_cnav_state,	KC_LCTL, _NAV,	 _NAV,     OS_CNAV,  keycode, record);
-	update_oneshot(		&os_sym_state,	_SYM,	 _SYM,	 _SYM,     OS_SYM,	 keycode, record);
-	if (!update_oneshot(&os_fn_state,   _FN,	 _FN,	 _FN,	   OS_FN,	 keycode, record)) { return false; }
+	if (!update_dynamic_state(keycode, record, KC_SPC, REPEAT, ALTREP)) { return false; }
+	
+	if (!process_repeat_key(		 keycode, record, REPEAT		)) { return false; }
+	if (!process_repeat_key_with_alt(keycode, record, REPEAT, ALTREP)) { return false; }
+	
+	update_oneshot(		&os_scaps_state, KC_LSFT, KC_LSFT, KC_LCAP, OS_SCAPS, keycode, record);
+	update_oneshot(		&os_shft_state,  KC_LSFT, KC_LSFT, KC_LSFT, OS_SHFT,  keycode, record);
+    update_oneshot(		&os_ctrl_state,  KC_LCTL, KC_LCTL, KC_LCTL, OS_CTRL,  keycode, record);
+    update_oneshot(		&os_alt_state,   KC_LALT, KC_LALT, KC_LALT, OS_ALT,   keycode, record);
+    update_oneshot(		&os_gui_state,   KC_LGUI, KC_LGUI, KC_LGUI, OS_GUI,   keycode, record);
+	update_oneshot(		&os_cnav_state,	 KC_LCTL, _NAV,	   _NAV,    OS_CNAV,  keycode, record);
+	update_oneshot(		&os_sym_state,	 _SYM,	  _SYM,	   _SYM,    OS_SYM,   keycode, record);
+	if (!update_oneshot(&os_fn_state,    _FN,	  _FN,	    _FN,	OS_FN,	  keycode, record)) { return false; }
 	
 	if (is_caps_word_enabled() && os_scaps_state == os_locked) {
 		disable_caps_word();
+		return false;
 	} else if (is_sym_word_enabled() && os_sym_state != os_up_unqueued) {
+		print("out");
 		disable_sym_word();
+		return false;
 	}
 	
-	// 					 Trigger  Keycode  Record
 	if (!update_caps_word(CAPWRD, keycode, record)) { return false; }
 	if (!update_sym_word( SYMWRD, keycode, record)) { return false; }
 	
@@ -517,7 +557,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 			return false;
 		case LN_JOIN:  // Select line keycode
 			if (record->event.pressed) {
-				SEND_STRING(SS_TAP(X_END X_DEL X_SPC) SS_LCTL(SS_TAP(X_RIGHT)) SS_LCTL(SS_LSFT(SS_TAP(X_LEFT))) SS_TAP(X_DEL X_SPC));
+				SEND_STRING(
+					SS_TAP(X_END)
+					SS_TAP(X_DOWN) SS_TAP(X_HOME)
+					SS_LCTL(SS_LSFT(SS_TAP(X_LEFT)))
+				SS_TAP(X_SPC));
 			}
 			return false;
 		case PAREN:  // Custom parantheses
@@ -611,7 +655,6 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
 		if (!clockwise) {
 			if (!is_alt_tab_active) {
 				is_alt_tab_active = true;
-				saved_mods = get_mods();
 				clear_mods();
 				register_code(KC_LALT);
 			}
